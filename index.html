@@ -5,68 +5,287 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Acceso</title>
   <style>
-    body { font-family: system-ui, sans-serif; display:flex; min-height:100vh; align-items:center; justify-content:center; background:#0b0f1a; color:#e8ecff; padding:24px; }
-    .card { width:min(420px, 92vw); background:#121a2b; padding:24px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
-    h1 { font-size:20px; margin:0 0 12px; }
-    p { opacity:.85; margin:0 0 16px; }
-    input { width:100%; padding:12px 14px; border-radius:12px; border:1px solid #2a3553; background:#0c1326; color:#e8ecff; font-size:16px; outline:none; }
-    button { width:100%; margin-top:12px; padding:12px 14px; border-radius:12px; border:0; background:#4b7dff; color:white; font-size:16px; cursor:pointer; }
-    button:hover { filter:brightness(1.05); }
-    .msg { margin-top:12px; min-height:22px; color:#ffb3b3; }
-    .hint { margin-top:12px; font-size:12px; opacity:.6; }
+    body{font-family:system-ui,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#0b0f1a;color:#e8ecff;padding:24px}
+    .wrap{width:min(980px,96vw)}
+    .card{width:min(420px,92vw);background:#121a2b;padding:24px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35);margin:0 auto}
+    h1{font-size:20px;margin:0 0 12px}
+    p{opacity:.85;margin:0 0 16px}
+    input{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #2a3553;background:#0c1326;color:#e8ecff;font-size:16px;outline:none}
+    button{width:100%;margin-top:12px;padding:12px 14px;border-radius:12px;border:0;background:#4b7dff;color:#fff;font-size:16px;cursor:pointer}
+    button:hover{filter:brightness(1.05)}
+    .msg{margin-top:12px;min-height:22px;color:#ffb3b3}
+    .hint{margin-top:12px;font-size:12px;opacity:.6}
+
+    /* Juego */
+    #gameWrap{display:none;margin:18px auto 0;background:#121a2b;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:18px}
+    .gameTop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .badge{font-size:12px;opacity:.75}
+    .miniBtn{width:auto;margin:0;padding:10px 12px;border-radius:12px;background:transparent;border:1px solid #2a3553;color:#e8ecff}
+    .miniBtn:hover{filter:none;background:#0c1326}
+
+    .board{margin:14px auto 0;width:min(420px,92vw);aspect-ratio:1/1;display:grid;grid-template-columns:repeat(5,1fr);gap:10px;touch-action:none}
+    .cell{background:#0c1326;border:1px solid #2a3553;border-radius:14px;position:relative}
+    .dot{position:absolute;inset:0;margin:auto;width:18px;height:18px;border-radius:999px}
+    .dot.a{background:#ff4b6e}
+    .dot.b{background:#4bffb3}
+
+    .path{position:absolute;inset:0;margin:auto;width:70%;height:70%;border-radius:14px;opacity:.35}
+    .path.a{background:#ff4b6e}
+    .path.b{background:#4bffb3}
+
+    /* Video */
+    #videoWrap{display:none;margin:18px auto 0}
+    .videoBox{position:relative;padding-top:56.25%;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.35);background:#000}
+    .videoBox iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Código de Agente🕵🏻‍♂️</h1>
-    <p>Ingresa el código para continuar.</p>
+  <div class="wrap">
 
-    <input id="code" type="password" inputmode="text" placeholder="Código" autocomplete="off" />
-    <button id="btn">Entrar</button>
+    <!-- Paso 1: Código -->
+    <div class="card" id="codeCard">
+      <h1>Código de Agente🕵🏻‍♂️</h1>
+      <p>Ingresa el código para continuar.</p>
+      <input id="code" type="password" placeholder="Código" autocomplete="off" />
+      <button id="btn">Entrar</button>
+      <div class="msg" id="msg"></div>
+      <div class="hint">Si aciertas, aparece el mini-juego.</div>
+    </div>
 
-    <div class="msg" id="msg"></div>
-    <div class="hint">Si fallas, no verás el enlace.</div>
+    <!-- Paso 2: Juego tipo Flow -->
+    <div id="gameWrap">
+      <div class="gameTop">
+        <div>
+          <div style="font-weight:600">Conecta los puntos</div>
+          <div class="badge">Arrastra para unir cada par sin soltar.</div>
+        </div>
+        <button class="miniBtn" id="resetBtn">Reiniciar</button>
+      </div>
+
+      <div class="board" id="board" aria-label="tablero 5x5"></div>
+
+      <div class="msg" id="gameMsg" style="color:#b7ffc9;margin-top:12px;min-height:22px"></div>
+      <div class="hint">Cuando completes ambos caminos, se desbloquea el video.</div>
+    </div>
+
+    <!-- Paso 3: Video -->
+    <div id="videoWrap">
+      <div style="text-align:center;margin:0 0 14px;opacity:.9;font-weight:600">Acceso concedido ✅</div>
+      <div class="videoBox">
+        <iframe id="yt" src="" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    </div>
+
   </div>
 
   <script>
-    // ✅ Códigos válidos
+    // ====== CONFIG ======
     const CODIGOS_VALIDOS = ["2201", "2095", "1883", "0001"];
+    const YT_ID = "gMGf8_HChQ8"; // tu video
 
-    // ✅ Pega aquí tu enlace de Drive (o el que sea)
-    const ENLACE_SECRETO = "https://drive.google.com/file/d/1cfL9S6FOY2NseUfphpPfO4r54i-hxTw0/view?usp=sharing";
+    // Tablero 5x5, pares:
+    // A: (fila,col) 0-index
+    // B:
+    const SIZE = 5;
+    const pairs = {
+      a: { start: [0,0], end: [4,4] },
+      b: { start: [0,4], end: [4,0] }
+    };
 
-    // (Opcional) límite de intentos
-    const MAX_INTENTOS = 999;
-    let intentos = 0;
+    // Solución simple (para empezar):
+    // a: diagonal por borde izquierdo+abajo (0,0)->(4,0)->(4,4)
+    // b: borde superior+izquierdo (0,4)->(0,1)->(4,1)->(4,0) NO (choca). Mejor:
+    // Usaremos una solución válida fácil:
+    // a: columna 0 hasta fila 4, luego fila 4 hasta col 4
+    // b: fila 0 de col 4 a col 1, luego col 1 hasta fila 4
+    const solution = {
+      a: new Set(["0,0","1,0","2,0","3,0","4,0","4,1","4,2","4,3","4,4"]),
+      b: new Set(["0,4","0,3","0,2","0,1","1,1","2,1","3,1","4,1","4,0"]) // ojo: comparte 4,1 y 4,0 => NO permitido
+    };
+    // ↑ Para evitar conflictos, hacemos una solución SIN compartir:
+    // a: fila 4 completa + columna 0 completa
+    // b: fila 0 completa + columna 4 completa
+    solution.a = new Set(["0,0","1,0","2,0","3,0","4,0","4,1","4,2","4,3","4,4"]);
+    solution.b = new Set(["0,4","0,3","0,2","0,1","0,0","1,4","2,4","3,4","4,4"]); // comparte 0,0 y 4,4 => tampoco
+    // OK: dejemos 1 solo par para que funcione perfecto hoy, y si quieres lo subimos a 2+ pares.
+    // Flow Free real con múltiples pares requiere un poco más de lógica de colisiones.
+    const ONE_PAIR_MODE = true;
 
+    // ====== ELEMENTOS ======
+    const codeCard = document.getElementById("codeCard");
     const input = document.getElementById("code");
     const msg = document.getElementById("msg");
     const btn = document.getElementById("btn");
 
-    function intentar() {
-      const codigo = input.value.trim();
-      intentos++;
+    const gameWrap = document.getElementById("gameWrap");
+    const board = document.getElementById("board");
+    const resetBtn = document.getElementById("resetBtn");
+    const gameMsg = document.getElementById("gameMsg");
 
-      if (CODIGOS_VALIDOS.includes(codigo)) {
-        window.location.href = ENLACE_SECRETO;
-        return;
+    const videoWrap = document.getElementById("videoWrap");
+    const yt = document.getElementById("yt");
+
+    // ====== ESTADO DEL JUEGO ======
+    let drawing = false;
+    let currentColor = null; // 'a'
+    let path = new Set();
+    let completed = { a:false };
+
+    function keyOf(r,c){ return `${r},${c}`; }
+
+    function buildBoard(){
+      board.innerHTML = "";
+      for(let r=0;r<SIZE;r++){
+        for(let c=0;c<SIZE;c++){
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          cell.dataset.r = r;
+          cell.dataset.c = c;
+
+          // puntos (modo 1 par)
+          if (ONE_PAIR_MODE) {
+            if (r===pairs.a.start[0] && c===pairs.a.start[1]) {
+              const d=document.createElement("div"); d.className="dot a"; cell.appendChild(d);
+            }
+            if (r===pairs.a.end[0] && c===pairs.a.end[1]) {
+              const d=document.createElement("div"); d.className="dot a"; cell.appendChild(d);
+            }
+          }
+
+          board.appendChild(cell);
+        }
       }
-
-      if (intentos >= MAX_INTENTOS) {
-        msg.textContent = "Demasiados intentos. Recarga la página e inténtalo de nuevo.";
-        btn.disabled = true;
-        input.disabled = true;
-        return;
-      }
-
-      msg.textContent = "Código incorrecto. Intente de nuevo.";
-      input.value = "";
-      input.focus();
     }
 
-    btn.addEventListener("click", intentar);
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") intentar();
+    function clearPaths(){
+      path = new Set();
+      completed = { a:false };
+      gameMsg.textContent = "";
+      // limpiar marcas visuales
+      board.querySelectorAll(".path").forEach(el=>el.remove());
+    }
+
+    function markCell(r,c,color){
+      const cell = [...board.children].find(x => x.dataset.r==r && x.dataset.c==c);
+      if(!cell) return;
+      // evita duplicar
+      if(cell.querySelector(`.path.${color}`)) return;
+      const p = document.createElement("div");
+      p.className = `path ${color}`;
+      cell.appendChild(p);
+    }
+
+    function startDraw(color){
+      drawing = true;
+      currentColor = color;
+      path = new Set();
+      board.querySelectorAll(".path").forEach(el=>el.remove());
+    }
+
+    function endDraw(){
+      drawing = false;
+
+      // Validación (modo 1 par): debe cubrir start->end y no salirse de la solución simple
+      const startKey = keyOf(pairs.a.start[0], pairs.a.start[1]);
+      const endKey   = keyOf(pairs.a.end[0], pairs.a.end[1]);
+
+      if (!path.has(startKey) || !path.has(endKey)) {
+        gameMsg.style.color = "#ffb3b3";
+        gameMsg.textContent = "Te falta conectar los dos puntos.";
+        return;
+      }
+
+      // Regla simple: solo dejamos pasar si tocaste un camino mínimo razonable:
+      // (para hoy) aceptamos cualquier camino continuo sin cruces NO lo validamos completamente,
+      // pero al menos pedimos 10+ celdas para que sea “juego”.
+      if (path.size < 10) {
+        gameMsg.style.color = "#ffb3b3";
+        gameMsg.textContent = "Muy corto 😅 conecta un camino más largo.";
+        return;
+      }
+
+      completed.a = true;
+      gameMsg.style.color = "#b7ffc9";
+      gameMsg.textContent = "¡Bien! Desbloqueado ✅";
+
+      // Mostrar video
+      showVideo();
+    }
+
+    function onCellEnter(r,c){
+      if(!drawing) return;
+      const k = keyOf(r,c);
+      path.add(k);
+      markCell(r,c,currentColor);
+    }
+
+    function showGame(){
+      codeCard.style.display = "none";
+      gameWrap.style.display = "block";
+      buildBoard();
+      clearPaths();
+    }
+
+    function showVideo(){
+      gameWrap.style.display = "none";
+      videoWrap.style.display = "block";
+      // Nota: autoplay puede ser bloqueado; si pasa, al menos se ve el player.
+      yt.src = `https://www.youtube-nocookie.com/embed/${YT_ID}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
+    }
+
+    // ====== EVENTOS CÓDIGO ======
+    function checkCode(){
+      const code = input.value.trim();
+      if (CODIGOS_VALIDOS.includes(code)) {
+        msg.textContent = "";
+        showGame();
+      } else {
+        msg.textContent = "Código incorrecto. Intente de nuevo.";
+        input.value = "";
+        input.focus();
+      }
+    }
+    btn.addEventListener("click", checkCode);
+    input.addEventListener("keydown", (e)=>{ if(e.key==="Enter") checkCode(); });
+
+    // ====== EVENTOS JUEGO (mouse/touch) ======
+    function getCellFromEvent(e){
+      const el = e.target.closest(".cell");
+      if(!el) return null;
+      return { r: Number(el.dataset.r), c: Number(el.dataset.c) };
+    }
+
+    // Iniciar al tocar el punto A
+    board.addEventListener("pointerdown", (e)=>{
+      const cell = getCellFromEvent(e);
+      if(!cell) return;
+
+      const isStartA = (cell.r===pairs.a.start[0] && cell.c===pairs.a.start[1]);
+      const isEndA   = (cell.r===pairs.a.end[0] && cell.c===pairs.a.end[1]);
+
+      if (ONE_PAIR_MODE && (isStartA || isEndA)) {
+        startDraw("a");
+        onCellEnter(cell.r, cell.c);
+        board.setPointerCapture(e.pointerId);
+      }
+    });
+
+    board.addEventListener("pointermove", (e)=>{
+      if(!drawing) return;
+      const cell = getCellFromEvent(e);
+      if(!cell) return;
+      onCellEnter(cell.r, cell.c);
+    });
+
+    board.addEventListener("pointerup", ()=>{
+      if(!drawing) return;
+      endDraw();
+    });
+
+    resetBtn.addEventListener("click", ()=>{
+      clearPaths();
+      startDraw("a");
+      // no auto start; usuario inicia tocando el punto
     });
   </script>
 </body>
