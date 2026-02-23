@@ -34,22 +34,19 @@
     }
     .cell{background:#0c1326;border:1px solid #2a3553;border-radius:14px;position:relative;overflow:hidden}
     .dot{position:absolute;inset:0;margin:auto;width:18px;height:18px;border-radius:999px;box-shadow:0 0 0 4px rgba(255,255,255,.05);z-index:3}
-    .dot.a{background:#ff4b6e}
-    .dot.b{background:#4bffb3}
-    .dot.c{background:#4b7dff}
+    .dot.a{background:#ff4b6e}   /* rojo */
+    .dot.b{background:#4bffb3}   /* verde */
+    .dot.c{background:#4b7dff}   /* azul  */
     .path{position:absolute;inset:0;margin:auto;width:78%;height:78%;border-radius:14px;opacity:.28;z-index:2}
     .path.a{background:#ff4b6e}
     .path.b{background:#4bffb3}
     .path.c{background:#4b7dff}
-
-    #videoWrap{display:none;margin:18px auto 0}
-    .videoBox{position:relative;padding-top:56.25%;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.35);background:#000}
-    .videoBox iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
   </style>
 </head>
 <body>
   <div class="wrap">
 
+    <!-- Paso 1: Código -->
     <div class="card" id="codeCard">
       <h1>Código de Agente🕵🏻‍♂️</h1>
       <p>Ingresa el código para continuar.</p>
@@ -59,6 +56,7 @@
       <div class="hint">Si aciertas, aparece el mini-juego.</div>
     </div>
 
+    <!-- Paso 2: Juego -->
     <div id="gameWrap">
       <div class="gameTop">
         <div>
@@ -71,33 +69,25 @@
       <div class="board" id="board"></div>
 
       <div class="msg" id="gameMsg" style="color:#b7ffc9;margin-top:12px;min-height:22px"></div>
-      <div class="hint">Completa los 3 caminos para desbloquear el video.</div>
-    </div>
-
-    <div id="videoWrap">
-      <div style="text-align:center;margin:0 0 14px;opacity:.9;font-weight:600">Acceso concedido ✅</div>
-      <div class="videoBox">
-        <iframe id="yt" src="" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
-      </div>
+      <div class="hint">Completa los 3 caminos para abrir el enlace de Drive.</div>
     </div>
 
   </div>
 
   <script>
-    // ====== CONFIG ======
+    // ✅ Códigos válidos
     const CODIGOS_VALIDOS = ["2201", "2095", "1883", "0001"];
-    const YT_ID = "gMGf8_HChQ8"; // tu ID
+
+    // ✅ Pega aquí tu enlace de Google Drive (ideal: "Cualquiera con el enlace puede ver")
+    const ENLACE_DRIVE = "PEGA_AQUI_TU_LINK_DE_DRIVE";
 
     const SIZE = 5;
 
-    // PARES (más retador, sin ser imposible)
-    // A (rojo): esquina sup izq -> centro der
-    // B (verde): sup der -> centro izq
-    // C (azul): abajo izq -> abajo der
+    // Puzzle "medio": hace pensar pero no frustra
     const pairs = {
-      a: { start:[0,1], end:[3,0] },
-      b: { start:[0,3], end:[3,4] },
-      c: { start:[4,1], end:[4,3] },
+      a: { start:[0,1], end:[3,0] }, // rojo
+      b: { start:[0,3], end:[3,4] }, // verde
+      c: { start:[4,1], end:[4,3] }, // azul
     };
 
     // ====== ELEMENTOS ======
@@ -110,9 +100,6 @@
     const board = document.getElementById("board");
     const resetBtn = document.getElementById("resetBtn");
     const gameMsg = document.getElementById("gameMsg");
-
-    const videoWrap = document.getElementById("videoWrap");
-    const yt = document.getElementById("yt");
 
     // ====== UTIL ======
     const key = (r,c)=>`${r},${c}`;
@@ -195,17 +182,18 @@
       resetGame();
     }
 
-    function showVideo(){
-      gameWrap.style.display="none";
-      videoWrap.style.display="block";
-      yt.src = `https://www.youtube-nocookie.com/embed/${YT_ID}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
+    function abrirDrivePantallaGrande(){
+      const w = screen.width, h = screen.height;
+      const features = `toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=${w},height=${h},top=0,left=0`;
+      const win = window.open(ENLACE_DRIVE, "_blank", features);
+      if (!win) window.location.href = ENLACE_DRIVE; // si bloquea pop-up
     }
 
     function checkWin(){
       if (done.a && done.b && done.c) {
         gameMsg.style.color="#b7ffc9";
-        gameMsg.textContent="¡Completado! ✅";
-        showVideo();
+        gameMsg.textContent="¡Completado! ✅ Abriendo…";
+        abrirDrivePantallaGrande();
       }
     }
 
@@ -230,6 +218,7 @@
       const k = key(toCell.r,toCell.c);
       const occupiedBy = occ.get(k);
 
+      // no entrar en celdas ocupadas por otro color
       if (occupiedBy && occupiedBy !== current) return;
 
       // no entrar en endpoints de otro color
@@ -269,7 +258,7 @@
       drawing=false; current=null; lastCell=null;
     }
 
-    // detectar celda bajo el puntero (clave para arrastrar bien)
+    // arrastre sólido: detecta celda bajo el puntero
     function cellFromPoint(x,y){
       const el = document.elementFromPoint(x,y);
       const cell = el && el.closest ? el.closest(".cell") : null;
