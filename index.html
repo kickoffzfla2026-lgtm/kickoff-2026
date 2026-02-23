@@ -5,24 +5,25 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Acceso</title>
   <style>
-    body{font-family:system-ui,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#0b0f1a;color:#e8ecff;padding:24px}
+    body{font-family:system-ui,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#f5f6f8;color:#111;padding:24px}
     .wrap{width:min(980px,96vw)}
-    .card{width:min(420px,92vw);background:#121a2b;padding:24px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35);margin:0 auto}
+    .card{width:min(420px,92vw);background:#fff;padding:24px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.12);margin:0 auto}
     h1{font-size:20px;margin:0 0 12px}
     p{opacity:.85;margin:0 0 16px}
-    input{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #2a3553;background:#0c1326;color:#e8ecff;font-size:16px;outline:none}
-    button{width:100%;margin-top:12px;padding:12px 14px;border-radius:12px;border:0;background:#4b7dff;color:#fff;font-size:16px;cursor:pointer}
+    input{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #d7dbe3;background:#fff;color:#111;font-size:16px;outline:none}
+    button{width:100%;margin-top:12px;padding:12px 14px;border-radius:12px;border:0;background:#2563eb;color:#fff;font-size:16px;cursor:pointer}
     button:hover{filter:brightness(1.05)}
-    .msg{margin-top:12px;min-height:22px;color:#ffb3b3}
-    .hint{margin-top:12px;font-size:12px;opacity:.6}
+    .msg{margin-top:12px;min-height:22px;color:#b00020}
+    .hint{margin-top:12px;font-size:12px;opacity:.7}
 
-    #gameWrap{display:none;margin:18px auto 0;background:#121a2b;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:18px}
+    #gameWrap{display:none;margin:18px auto 0;background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.12);padding:18px}
     .gameTop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-    .miniBtn{width:auto;margin:0;padding:10px 12px;border-radius:12px;background:transparent;border:1px solid #2a3553;color:#e8ecff;cursor:pointer}
-    .miniBtn:hover{background:#0c1326}
+    .miniBtn{width:auto;margin:0;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid #d7dbe3;color:#111;cursor:pointer}
+    .miniBtn:hover{background:#f5f6f8}
 
-    canvas{width:100%;height:auto;border-radius:16px;background:#0c1326;border:1px solid #2a3553;touch-action:manipulation}
-    .ok{color:#b7ffc9}
+    canvas{width:100%;height:auto;border-radius:16px;background:#ffffff;border:1px solid #d7dbe3;touch-action:manipulation}
+    .ok{color:#117a37}
+    .pill{display:inline-block;padding:2px 10px;border-radius:999px;background:#f1f5ff;border:1px solid #d7dbe3;font-size:12px}
   </style>
 </head>
 <body>
@@ -34,21 +35,21 @@
       <input id="code" type="password" placeholder="Código" autocomplete="off" />
       <button id="btn">Entrar</button>
       <div class="msg" id="msg"></div>
-      <div class="hint">Si aciertas, juegas 10 segundos: salta 3 barreras.</div>
+      <div class="hint">Si aciertas, debes saltar 3 barreras.</div>
     </div>
 
     <!-- Paso 2: Juego -->
     <div id="gameWrap">
       <div class="gameTop">
         <div>
-          <div style="font-weight:600">Misión: salta 3 barreras</div>
-          <div class="hint" style="margin:6px 0 0">Espacio / clic / toque para saltar.</div>
+          <div style="font-weight:700">Misión: salta 3 barreras <span class="pill">Espacio / clic / toque</span></div>
+          <div class="hint" style="margin:6px 0 0">Si chocas, reinicia.</div>
         </div>
         <button class="miniBtn" id="restartBtn">Reiniciar</button>
       </div>
 
       <div style="margin-top:12px" class="hint">
-        Barreras superadas: <span id="count">0</span>/3
+        Barreras superadas: <strong><span id="count">0</span>/3</strong>
         <span id="status" style="margin-left:10px"></span>
       </div>
 
@@ -96,15 +97,15 @@
     const gravity = 0.9;
 
     const spy = {
-      x: 110,
+      x: 120,
       y: groundY,
-      w: 28,
-      h: 36,
+      w: 34,
+      h: 46,
       vy: 0,
       jumping: false
     };
 
-    let speed = 6.5;
+    let speed = 6.8;
     let spawnTimer = 0;
     let nextSpawn = 70;
 
@@ -114,7 +115,7 @@
       running = true;
       won = false;
       passed = 0;
-      speed = 6.5;
+      speed = 6.8;
       spawnTimer = 0;
       nextSpawn = 70;
 
@@ -131,24 +132,22 @@
     function jump(){
       if (!running || won) return;
       if (!spy.jumping) {
-        spy.vy = -15;
+        spy.vy = -16;
         spy.jumping = true;
       }
     }
 
     function spawnObstacle(){
-      // Barreras simples (rectángulos)
-      const h = 28 + Math.floor(Math.random()*18);
+      const h = 30 + Math.floor(Math.random()*22);
       obstacles.push({
         x: cv.width + 10,
         y: groundY,
-        w: 18 + Math.floor(Math.random()*12),
+        w: 20 + Math.floor(Math.random()*14),
         h
       });
     }
 
     function collide(a, b){
-      // a = spy, b = obstacle (desde suelo hacia arriba)
       const ax1 = a.x, ax2 = a.x + a.w;
       const ay1 = a.y - a.h, ay2 = a.y;
       const bx1 = b.x, bx2 = b.x + b.w;
@@ -157,7 +156,6 @@
     }
 
     function update(){
-      // física salto
       spy.vy += gravity;
       spy.y += spy.vy;
 
@@ -167,7 +165,6 @@
         spy.jumping = false;
       }
 
-      // spawns
       spawnTimer++;
       if (spawnTimer >= nextSpawn) {
         spawnTimer = 0;
@@ -175,61 +172,98 @@
         spawnObstacle();
       }
 
-      // mover obstáculos + colisión + contar pasados
       for (let i = obstacles.length - 1; i >= 0; i--){
         const o = obstacles[i];
         o.x -= speed;
 
         if (collide(spy, o)) {
           running = false;
-          statusEl.textContent = "Fallaste 😅 (reinicia)";
+          statusEl.textContent = "Fallaste 😅";
           statusEl.className = "";
         }
 
-        // si pasó por completo el espía
         if (!o.passed && o.x + o.w < spy.x) {
           o.passed = true;
           passed++;
           countEl.textContent = String(passed);
-
-          // acelera un poquito
-          speed += 0.25;
+          speed += 0.28;
 
           if (passed >= 3 && !won) {
             won = true;
             running = false;
             statusEl.textContent = "¡Misión cumplida! ✅ Abriendo…";
             statusEl.className = "ok";
-            // abrir Drive (por ser tras interacción, suele permitir pop-up)
             abrirDrivePantallaGrande();
           }
         }
 
-        // limpiar fuera de pantalla
         if (o.x + o.w < -40) obstacles.splice(i, 1);
       }
+    }
+
+    // Dibuja un espía “cartoon” (no solo un rectángulo)
+    function drawSpy(){
+      const x = spy.x, y = spy.y;
+
+      // sombra
+      ctx.fillStyle = "rgba(0,0,0,0.08)";
+      ctx.beginPath();
+      ctx.ellipse(x + spy.w/2, groundY + 10, 18, 4, 0, 0, Math.PI*2);
+      ctx.fill();
+
+      // cuerpo (traje)
+      ctx.fillStyle = "#111";
+      ctx.fillRect(x, y - spy.h, spy.w, spy.h);
+
+      // cabeza
+      ctx.fillStyle = "#f2c7a0";
+      ctx.fillRect(x + 8, y - spy.h - 18, 18, 18);
+
+      // pelo
+      ctx.fillStyle = "#111";
+      ctx.fillRect(x + 8, y - spy.h - 18, 18, 6);
+
+      // gafas
+      ctx.fillStyle = "#111";
+      ctx.fillRect(x + 7, y - spy.h - 10, 20, 6);
+      ctx.clearRect(x + 9, y - spy.h - 9, 6, 4);
+      ctx.clearRect(x + 19, y - spy.h - 9, 6, 4);
+
+      // corbata (azul)
+      ctx.fillStyle = "#2563eb";
+      ctx.fillRect(x + 16, y - spy.h + 14, 2, 16);
+
+      // pierna delantera
+      ctx.fillStyle = "#111";
+      ctx.fillRect(x + 5, y - 14, 9, 14);
+
+      // pierna trasera
+      ctx.fillStyle = "#111";
+      ctx.fillRect(x + 20, y - 12, 9, 12);
     }
 
     function draw(){
       ctx.clearRect(0,0,cv.width,cv.height);
 
-      // suelo
-      ctx.fillRect(40, groundY, cv.width-80, 3);
+      // cielo (blanco) y línea de suelo
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0,0,cv.width,cv.height);
 
-      // "espía" (muñeco simple)
-      // cuerpo
-      ctx.fillRect(spy.x, spy.y - spy.h, spy.w, spy.h);
-      // “gafas” (detalle)
-      ctx.clearRect(spy.x + 6, spy.y - 26, 16, 6);
+      ctx.fillStyle = "#111";
+      ctx.fillRect(60, groundY, cv.width-120, 3);
 
-      // obstáculos
+      // texto
+      ctx.fillStyle = "#111";
+      ctx.font = "16px system-ui";
+      ctx.fillText("Espacio / clic / toque para saltar", 60, 42);
+
+      // obstáculos (negros, visibles)
+      ctx.fillStyle = "#111";
       for (const o of obstacles){
         ctx.fillRect(o.x, o.y - o.h, o.w, o.h);
       }
 
-      // texto ayuda
-      ctx.font = "16px system-ui";
-      ctx.fillText("Espacio / clic / toque para saltar", 60, 50);
+      drawSpy();
     }
 
     function loop(){
@@ -265,10 +299,6 @@
       if (e.code === "Space") { e.preventDefault(); jump(); }
     });
     cv.addEventListener("pointerdown",(e)=>{ e.preventDefault(); jump(); });
-    gameWrap.addEventListener("click",(e)=>{
-      // si clic fuera del canvas, también salta (opcional)
-      if (e.target.id !== "restartBtn") jump();
-    });
 
     restartBtn.addEventListener("click", ()=>{
       statusEl.textContent = "";
@@ -276,7 +306,6 @@
       resetGame();
     });
 
-    // iniciar render
     loop();
   </script>
 </body>
