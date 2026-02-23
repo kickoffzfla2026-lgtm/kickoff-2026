@@ -19,19 +19,48 @@
     /* Juego */
     #gameWrap{display:none;margin:18px auto 0;background:#121a2b;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:18px}
     .gameTop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-    .badge{font-size:12px;opacity:.75}
-    .miniBtn{width:auto;margin:0;padding:10px 12px;border-radius:12px;background:transparent;border:1px solid #2a3553;color:#e8ecff}
-    .miniBtn:hover{filter:none;background:#0c1326}
+    .miniBtn{width:auto;margin:0;padding:10px 12px;border-radius:12px;background:transparent;border:1px solid #2a3553;color:#e8ecff;cursor:pointer}
+    .miniBtn:hover{background:#0c1326}
 
-    .board{margin:14px auto 0;width:min(420px,92vw);aspect-ratio:1/1;display:grid;grid-template-columns:repeat(5,1fr);gap:10px;touch-action:none}
-    .cell{background:#0c1326;border:1px solid #2a3553;border-radius:14px;position:relative}
-    .dot{position:absolute;inset:0;margin:auto;width:18px;height:18px;border-radius:999px}
+    .board{
+      margin:14px auto 0;
+      width:min(460px,92vw);
+      aspect-ratio:1/1;
+      display:grid;
+      grid-template-columns:repeat(5,1fr);
+      gap:10px;
+      touch-action:none;              /* clave para móvil */
+      user-select:none;
+      -webkit-user-select:none;
+      -webkit-touch-callout:none;
+    }
+    .cell{
+      background:#0c1326;
+      border:1px solid #2a3553;
+      border-radius:14px;
+      position:relative;
+      overflow:hidden;
+    }
+    .dot{
+      position:absolute;inset:0;margin:auto;
+      width:18px;height:18px;border-radius:999px;
+      box-shadow:0 0 0 4px rgba(255,255,255,.05);
+      z-index:3;
+    }
     .dot.a{background:#ff4b6e}
     .dot.b{background:#4bffb3}
+    .dot.c{background:#4b7dff}
 
-    .path{position:absolute;inset:0;margin:auto;width:70%;height:70%;border-radius:14px;opacity:.35}
+    .path{
+      position:absolute;inset:0;margin:auto;
+      width:78%;height:78%;
+      border-radius:14px;
+      opacity:.28;
+      z-index:2;
+    }
     .path.a{background:#ff4b6e}
     .path.b{background:#4bffb3}
+    .path.c{background:#4b7dff}
 
     /* Video */
     #videoWrap{display:none;margin:18px auto 0}
@@ -52,12 +81,12 @@
       <div class="hint">Si aciertas, aparece el mini-juego.</div>
     </div>
 
-    <!-- Paso 2: Juego tipo Flow -->
+    <!-- Paso 2: Juego tipo Flow (3 columnas / 3 caminos) -->
     <div id="gameWrap">
       <div class="gameTop">
         <div>
-          <div style="font-weight:600">Conecta los puntos</div>
-          <div class="badge">Arrastra para unir cada par sin soltar.</div>
+          <div style="font-weight:600">Conecta los 3 pares</div>
+          <div class="hint" style="margin:6px 0 0">Toca un punto y arrastra. Solo puedes moverte a celdas vecinas.</div>
         </div>
         <button class="miniBtn" id="resetBtn">Reiniciar</button>
       </div>
@@ -65,7 +94,7 @@
       <div class="board" id="board" aria-label="tablero 5x5"></div>
 
       <div class="msg" id="gameMsg" style="color:#b7ffc9;margin-top:12px;min-height:22px"></div>
-      <div class="hint">Cuando completes ambos caminos, se desbloquea el video.</div>
+      <div class="hint">Al completar los 3 caminos, se desbloquea el video.</div>
     </div>
 
     <!-- Paso 3: Video -->
@@ -81,35 +110,19 @@
   <script>
     // ====== CONFIG ======
     const CODIGOS_VALIDOS = ["2201", "2095", "1883", "0001"];
-    const YT_ID = "gMGf8_HChQ8"; // tu video
+    const YT_ID = "gMGf8_HChQ8"; // <-- tu ID
 
-    // Tablero 5x5, pares:
-    // A: (fila,col) 0-index
-    // B:
     const SIZE = 5;
-    const pairs = {
-      a: { start: [0,0], end: [4,4] },
-      b: { start: [0,4], end: [4,0] }
-    };
 
-    // Solución simple (para empezar):
-    // a: diagonal por borde izquierdo+abajo (0,0)->(4,0)->(4,4)
-    // b: borde superior+izquierdo (0,4)->(0,1)->(4,1)->(4,0) NO (choca). Mejor:
-    // Usaremos una solución válida fácil:
-    // a: columna 0 hasta fila 4, luego fila 4 hasta col 4
-    // b: fila 0 de col 4 a col 1, luego col 1 hasta fila 4
-    const solution = {
-      a: new Set(["0,0","1,0","2,0","3,0","4,0","4,1","4,2","4,3","4,4"]),
-      b: new Set(["0,4","0,3","0,2","0,1","1,1","2,1","3,1","4,1","4,0"]) // ojo: comparte 4,1 y 4,0 => NO permitido
+    // 3 columnas / 3 caminos (fácil, sin cruces):
+    // A: col 0 (arriba-abajo)
+    // B: col 2
+    // C: col 4
+    const pairs = {
+      a: { start:[0,0], end:[4,0] },
+      b: { start:[0,2], end:[4,2] },
+      c: { start:[0,4], end:[4,4] },
     };
-    // ↑ Para evitar conflictos, hacemos una solución SIN compartir:
-    // a: fila 4 completa + columna 0 completa
-    // b: fila 0 completa + columna 4 completa
-    solution.a = new Set(["0,0","1,0","2,0","3,0","4,0","4,1","4,2","4,3","4,4"]);
-    solution.b = new Set(["0,4","0,3","0,2","0,1","0,0","1,4","2,4","3,4","4,4"]); // comparte 0,0 y 4,4 => tampoco
-    // OK: dejemos 1 solo par para que funcione perfecto hoy, y si quieres lo subimos a 2+ pares.
-    // Flow Free real con múltiples pares requiere un poco más de lógica de colisiones.
-    const ONE_PAIR_MODE = true;
 
     // ====== ELEMENTOS ======
     const codeCard = document.getElementById("codeCard");
@@ -125,168 +138,232 @@
     const videoWrap = document.getElementById("videoWrap");
     const yt = document.getElementById("yt");
 
-    // ====== ESTADO DEL JUEGO ======
-    let drawing = false;
-    let currentColor = null; // 'a'
-    let path = new Set();
-    let completed = { a:false };
+    // ====== UTIL ======
+    const key = (r,c)=>`${r},${c}`;
+    const inBounds = (r,c)=>r>=0 && r<SIZE && c>=0 && c<SIZE;
+    const isNeighbor = (a,b)=>Math.abs(a.r-b.r)+Math.abs(a.c-b.c)===1;
 
-    function keyOf(r,c){ return `${r},${c}`; }
+    function isEndpoint(color,r,c){
+      const p=pairs[color];
+      return (p.start[0]===r && p.start[1]===c) || (p.end[0]===r && p.end[1]===c);
+    }
+    function otherEndpoint(color,r,c){
+      const p=pairs[color];
+      if (p.start[0]===r && p.start[1]===c) return {r:p.end[0], c:p.end[1]};
+      return {r:p.start[0], c:p.start[1]};
+    }
+
+    // ====== ESTADO ======
+    // ocupación: cellKey -> 'a'|'b'|'c'
+    const occ = new Map();
+    // caminos por color: array de {r,c}
+    const paths = { a:[], b:[], c:[] };
+    const done  = { a:false, b:false, c:false };
+
+    let drawing = false;
+    let current = null; // 'a'|'b'|'c'
+    let lastCell = null;
+
+    function cellEl(r,c){
+      // acceso directo por index (grid lineal)
+      const idx = r*SIZE + c;
+      return board.children[idx];
+    }
+
+    function clearVisualPaths(){
+      board.querySelectorAll(".path").forEach(el=>el.remove());
+    }
+
+    function renderPaths(){
+      clearVisualPaths();
+      for (const color of ["a","b","c"]) {
+        for (const cell of paths[color]) {
+          const el = cellEl(cell.r, cell.c);
+          if (!el) continue;
+          const p = document.createElement("div");
+          p.className = `path ${color}`;
+          el.appendChild(p);
+        }
+      }
+    }
+
+    function resetGame(){
+      occ.clear();
+      paths.a=[]; paths.b=[]; paths.c=[];
+      done.a=false; done.b=false; done.c=false;
+      drawing=false; current=null; lastCell=null;
+      gameMsg.textContent="";
+      renderPaths();
+    }
 
     function buildBoard(){
-      board.innerHTML = "";
-      for(let r=0;r<SIZE;r++){
-        for(let c=0;c<SIZE;c++){
-          const cell = document.createElement("div");
-          cell.className = "cell";
-          cell.dataset.r = r;
-          cell.dataset.c = c;
+      board.innerHTML="";
+      for (let r=0;r<SIZE;r++){
+        for (let c=0;c<SIZE;c++){
+          const cell=document.createElement("div");
+          cell.className="cell";
+          cell.dataset.r=r;
+          cell.dataset.c=c;
 
-          // puntos (modo 1 par)
-          if (ONE_PAIR_MODE) {
-            if (r===pairs.a.start[0] && c===pairs.a.start[1]) {
-              const d=document.createElement("div"); d.className="dot a"; cell.appendChild(d);
-            }
-            if (r===pairs.a.end[0] && c===pairs.a.end[1]) {
-              const d=document.createElement("div"); d.className="dot a"; cell.appendChild(d);
+          for (const color of ["a","b","c"]) {
+            const p=pairs[color];
+            if ((p.start[0]===r && p.start[1]===c) || (p.end[0]===r && p.end[1]===c)) {
+              const d=document.createElement("div");
+              d.className=`dot ${color}`;
+              cell.appendChild(d);
             }
           }
-
           board.appendChild(cell);
         }
       }
     }
 
-    function clearPaths(){
-      path = new Set();
-      completed = { a:false };
-      gameMsg.textContent = "";
-      // limpiar marcas visuales
-      board.querySelectorAll(".path").forEach(el=>el.remove());
-    }
-
-    function markCell(r,c,color){
-      const cell = [...board.children].find(x => x.dataset.r==r && x.dataset.c==c);
-      if(!cell) return;
-      // evita duplicar
-      if(cell.querySelector(`.path.${color}`)) return;
-      const p = document.createElement("div");
-      p.className = `path ${color}`;
-      cell.appendChild(p);
-    }
-
-    function startDraw(color){
-      drawing = true;
-      currentColor = color;
-      path = new Set();
-      board.querySelectorAll(".path").forEach(el=>el.remove());
-    }
-
-    function endDraw(){
-      drawing = false;
-
-      // Validación (modo 1 par): debe cubrir start->end y no salirse de la solución simple
-      const startKey = keyOf(pairs.a.start[0], pairs.a.start[1]);
-      const endKey   = keyOf(pairs.a.end[0], pairs.a.end[1]);
-
-      if (!path.has(startKey) || !path.has(endKey)) {
-        gameMsg.style.color = "#ffb3b3";
-        gameMsg.textContent = "Te falta conectar los dos puntos.";
-        return;
-      }
-
-      // Regla simple: solo dejamos pasar si tocaste un camino mínimo razonable:
-      // (para hoy) aceptamos cualquier camino continuo sin cruces NO lo validamos completamente,
-      // pero al menos pedimos 10+ celdas para que sea “juego”.
-      if (path.size < 10) {
-        gameMsg.style.color = "#ffb3b3";
-        gameMsg.textContent = "Muy corto 😅 conecta un camino más largo.";
-        return;
-      }
-
-      completed.a = true;
-      gameMsg.style.color = "#b7ffc9";
-      gameMsg.textContent = "¡Bien! Desbloqueado ✅";
-
-      // Mostrar video
-      showVideo();
-    }
-
-    function onCellEnter(r,c){
-      if(!drawing) return;
-      const k = keyOf(r,c);
-      path.add(k);
-      markCell(r,c,currentColor);
-    }
-
     function showGame(){
-      codeCard.style.display = "none";
-      gameWrap.style.display = "block";
+      codeCard.style.display="none";
+      gameWrap.style.display="block";
       buildBoard();
-      clearPaths();
+      resetGame();
     }
 
     function showVideo(){
-      gameWrap.style.display = "none";
-      videoWrap.style.display = "block";
-      // Nota: autoplay puede ser bloqueado; si pasa, al menos se ve el player.
+      gameWrap.style.display="none";
+      videoWrap.style.display="block";
       yt.src = `https://www.youtube-nocookie.com/embed/${YT_ID}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
     }
 
-    // ====== EVENTOS CÓDIGO ======
-    function checkCode(){
-      const code = input.value.trim();
-      if (CODIGOS_VALIDOS.includes(code)) {
-        msg.textContent = "";
-        showGame();
-      } else {
-        msg.textContent = "Código incorrecto. Intente de nuevo.";
-        input.value = "";
-        input.focus();
+    function checkWin(){
+      if (done.a && done.b && done.c) {
+        gameMsg.style.color="#b7ffc9";
+        gameMsg.textContent="¡Completado! ✅";
+        showVideo();
       }
     }
-    btn.addEventListener("click", checkCode);
-    input.addEventListener("keydown", (e)=>{ if(e.key==="Enter") checkCode(); });
 
-    // ====== EVENTOS JUEGO (mouse/touch) ======
-    function getCellFromEvent(e){
-      const el = e.target.closest(".cell");
-      if(!el) return null;
-      return { r: Number(el.dataset.r), c: Number(el.dataset.c) };
+    function startDrawing(color, startCell){
+      drawing=true;
+      current=color;
+      lastCell=startCell;
+
+      // borrar camino anterior de ese color
+      for (const cell of paths[color]) occ.delete(key(cell.r, cell.c));
+      paths[color]=[];
+      done[color]=false;
+
+      // colocar inicio
+      occ.set(key(startCell.r, startCell.c), color);
+      paths[color].push(startCell);
+      renderPaths();
     }
 
-    // Iniciar al tocar el punto A
+    function tryExtend(toCell){
+      if(!drawing || !current || !lastCell) return;
+      if(!inBounds(toCell.r,toCell.c)) return;
+      if(!isNeighbor(lastCell,toCell)) return;
+
+      const k = key(toCell.r,toCell.c);
+      const occupiedBy = occ.get(k);
+
+      // no entrar en celdas ocupadas por otro color
+      if (occupiedBy && occupiedBy !== current) return;
+
+      // no entrar en endpoints de otro color
+      for (const other of ["a","b","c"]) {
+        if (other!==current && isEndpoint(other,toCell.r,toCell.c)) return;
+      }
+
+      // si vuelves a una celda del mismo camino, recorta
+      const idx = paths[current].findIndex(p=>p.r===toCell.r && p.c===toCell.c);
+      if (idx !== -1) {
+        const removed = paths[current].splice(idx+1);
+        for (const cell of removed) occ.delete(key(cell.r,cell.c));
+        lastCell = toCell;
+        renderPaths();
+        return;
+      }
+
+      // añade
+      occ.set(k,current);
+      paths[current].push(toCell);
+      lastCell = toCell;
+      renderPaths();
+
+      // ¿llegó al endpoint objetivo?
+      const start = paths[current][0];
+      const target = otherEndpoint(current, start.r, start.c);
+      if (toCell.r===target.r && toCell.c===target.c) {
+        done[current]=true;
+        drawing=false;
+        current=null;
+        lastCell=null;
+        gameMsg.style.color="#b7ffc9";
+        gameMsg.textContent="¡Bien! Ahora completa los otros colores.";
+        checkWin();
+      }
+    }
+
+    function endDrawing(){
+      drawing=false;
+      current=null;
+      lastCell=null;
+    }
+
+    // ====== ARRRASTRE REAL: detecta celda bajo el puntero ======
+    function cellFromPoint(clientX, clientY){
+      const el = document.elementFromPoint(clientX, clientY);
+      const cell = el && el.closest ? el.closest(".cell") : null;
+      if (!cell) return null;
+      return { r:Number(cell.dataset.r), c:Number(cell.dataset.c) };
+    }
+
     board.addEventListener("pointerdown", (e)=>{
-      const cell = getCellFromEvent(e);
-      if(!cell) return;
+      const cell = cellFromPoint(e.clientX, e.clientY);
+      if (!cell) return;
 
-      const isStartA = (cell.r===pairs.a.start[0] && cell.c===pairs.a.start[1]);
-      const isEndA   = (cell.r===pairs.a.end[0] && cell.c===pairs.a.end[1]);
-
-      if (ONE_PAIR_MODE && (isStartA || isEndA)) {
-        startDraw("a");
-        onCellEnter(cell.r, cell.c);
-        board.setPointerCapture(e.pointerId);
+      // iniciar solo desde un endpoint
+      for (const color of ["a","b","c"]) {
+        if (isEndpoint(color, cell.r, cell.c)) {
+          startDrawing(color, cell);
+          board.setPointerCapture(e.pointerId);
+          e.preventDefault();
+          return;
+        }
       }
     });
 
     board.addEventListener("pointermove", (e)=>{
-      if(!drawing) return;
-      const cell = getCellFromEvent(e);
-      if(!cell) return;
-      onCellEnter(cell.r, cell.c);
+      if (!drawing) return;
+      const cell = cellFromPoint(e.clientX, e.clientY);
+      if (!cell) return;
+      tryExtend(cell);
+      e.preventDefault();
     });
 
-    board.addEventListener("pointerup", ()=>{
-      if(!drawing) return;
-      endDraw();
+    board.addEventListener("pointerup", (e)=>{
+      endDrawing();
+      e.preventDefault();
     });
 
-    resetBtn.addEventListener("click", ()=>{
-      clearPaths();
-      startDraw("a");
-      // no auto start; usuario inicia tocando el punto
+    board.addEventListener("pointercancel", (e)=>{
+      endDrawing();
+      e.preventDefault();
     });
+
+    resetBtn.addEventListener("click", resetGame);
+
+    // ====== CÓDIGO ======
+    function checkCode(){
+      const code = input.value.trim();
+      if (CODIGOS_VALIDOS.includes(code)) {
+        msg.textContent="";
+        showGame();
+      } else {
+        msg.textContent="Código incorrecto. Intente de nuevo.";
+        input.value="";
+        input.focus();
+      }
+    }
+    btn.addEventListener("click", checkCode);
+    input.addEventListener("keydown",(e)=>{ if(e.key==="Enter") checkCode(); });
   </script>
 </body>
 </html>
