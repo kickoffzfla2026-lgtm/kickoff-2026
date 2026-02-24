@@ -16,6 +16,7 @@
       --danger:#ffb3b3;
       --ok:#b7ffc9;
     }
+
     body{
       font-family:system-ui,sans-serif;
       display:flex;
@@ -25,8 +26,52 @@
       background:var(--bg);
       color:var(--text);
       padding:24px;
+      margin:0;
+      overflow-x:hidden;
     }
-    .wrap{width:min(980px,96vw)}
+
+    /* Capas */
+    #particles{
+      position:fixed; inset:0;
+      width:100vw; height:100vh;
+      z-index:0;
+      pointer-events:none;
+      opacity:0.9;
+    }
+    #radarWrap{
+      position:fixed;
+      top:14px; right:14px;
+      width:160px; height:160px;
+      z-index:20;
+      pointer-events:none;
+      opacity:0.95;
+      filter: drop-shadow(0 8px 18px rgba(0,0,0,.35));
+    }
+    #radarLabel{
+      position:absolute;
+      bottom:-18px; right:6px;
+      font-size:11px;
+      color:rgba(232,236,255,.55);
+      letter-spacing:.12em;
+      text-transform:uppercase;
+    }
+    #radar{
+      width:160px; height:160px;
+      border-radius:999px;
+      border:1px solid rgba(75,125,255,.35);
+      background:
+        radial-gradient(circle at center, rgba(75,255,179,.09), rgba(11,15,26,.0) 60%),
+        radial-gradient(circle at center, rgba(255,255,255,.06) 2px, rgba(0,0,0,0) 3px),
+        radial-gradient(circle at center, rgba(255,255,255,.04) 38%, rgba(0,0,0,0) 40%),
+        radial-gradient(circle at center, rgba(255,255,255,.03) 58%, rgba(0,0,0,0) 60%);
+    }
+
+    .wrap{
+      width:min(980px,96vw);
+      position:relative;
+      z-index:5; /* sobre partículas */
+    }
+
     .card{
       width:min(560px,96vw);
       background:var(--card);
@@ -63,7 +108,7 @@
     .msg{margin-top:12px;min-height:22px;color:var(--danger)}
     .hint{margin-top:12px;font-size:12px;opacity:.7;color:var(--muted)}
 
-    /* Mensaje de misión (más grande) */
+    /* Mensaje misión */
     .missionTitle{
       font-size:34px;
       line-height:1.05;
@@ -86,6 +131,7 @@
     }
     .missionBox strong{color:#fff}
 
+    /* Juego */
     #gameWrap{
       display:none;
       margin:18px auto 0;
@@ -139,6 +185,16 @@
   </style>
 </head>
 <body>
+
+  <!-- Partículas -->
+  <canvas id="particles"></canvas>
+
+  <!-- Radar -->
+  <div id="radarWrap">
+    <canvas id="radar" width="160" height="160"></canvas>
+    <div id="radarLabel">RADAR</div>
+  </div>
+
   <div class="wrap">
 
     <!-- 1) CÓDIGO -->
@@ -329,8 +385,7 @@
       const H = window.innerHeight;
 
       const pieces = [];
-      const N = 140; // menos "ruidoso" pero visible
-
+      const N = 140;
       const colors = ["#4b7dff", "#ff4b6e", "#4bffb3", "#ffd166", "#ffffff"];
 
       for (let i=0; i<N; i++){
@@ -507,6 +562,147 @@
     btn.addEventListener("click", checkCode);
     input.addEventListener("keydown",(e)=>{ if(e.key==="Enter") checkCode(); });
     readyBtn.addEventListener("click", showGame);
+
+    // ====== Partículas de fondo ======
+    const pCanvas = document.getElementById("particles");
+    const pctx = pCanvas.getContext("2d");
+    let pW=0, pH=0, pDpr=1;
+    const particles = [];
+    const PCOUNT = 70;
+
+    function resizeParticles(){
+      pDpr = window.devicePixelRatio || 1;
+      pW = window.innerWidth;
+      pH = window.innerHeight;
+      pCanvas.width = Math.floor(pW * pDpr);
+      pCanvas.height = Math.floor(pH * pDpr);
+      pctx.setTransform(pDpr,0,0,pDpr,0,0);
+    }
+    window.addEventListener("resize", resizeParticles);
+
+    function initParticles(){
+      particles.length = 0;
+      for(let i=0;i<PCOUNT;i++){
+        particles.push({
+          x: Math.random()*pW,
+          y: Math.random()*pH,
+          r: 1 + Math.random()*2.2,
+          vx: (Math.random()-0.5)*0.35,
+          vy: (Math.random()-0.5)*0.35,
+          a: 0.15 + Math.random()*0.35
+        });
+      }
+    }
+
+    function drawParticles(){
+      pctx.clearRect(0,0,pW,pH);
+
+      // puntos
+      for(const p of particles){
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.x < -10) p.x = pW + 10;
+        if (p.x > pW + 10) p.x = -10;
+        if (p.y < -10) p.y = pH + 10;
+        if (p.y > pH + 10) p.y = -10;
+
+        pctx.fillStyle = `rgba(232,236,255,${p.a})`;
+        pctx.beginPath();
+        pctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        pctx.fill();
+      }
+
+      // líneas sutiles entre cercanos
+      for(let i=0;i<particles.length;i++){
+        for(let j=i+1;j<particles.length;j++){
+          const a=particles[i], b=particles[j];
+          const dx=a.x-b.x, dy=a.y-b.y;
+          const dist=Math.hypot(dx,dy);
+          if(dist < 120){
+            const alpha = (1 - dist/120) * 0.18;
+            pctx.strokeStyle = `rgba(75,125,255,${alpha})`;
+            pctx.lineWidth = 1;
+            pctx.beginPath();
+            pctx.moveTo(a.x,a.y);
+            pctx.lineTo(b.x,b.y);
+            pctx.stroke();
+          }
+        }
+      }
+
+      requestAnimationFrame(drawParticles);
+    }
+
+    // ====== Radar animado ======
+    const rCanvas = document.getElementById("radar");
+    const rctx = rCanvas.getContext("2d");
+    const RW = rCanvas.width;
+    const RH = rCanvas.height;
+    const R = RW/2;
+    const blips = [
+      { ang: 0.9,  rad: 0.55,  pulse: 0 },
+      { ang: 2.2,  rad: 0.72,  pulse: 0.4 },
+      { ang: 4.35, rad: 0.35,  pulse: 0.8 }
+    ];
+    let sweep = 0;
+
+    function drawRadar(){
+      rctx.clearRect(0,0,RW,RH);
+      rctx.save();
+      rctx.translate(R,R);
+
+      // grid
+      rctx.strokeStyle = "rgba(75,255,179,0.18)";
+      rctx.lineWidth = 1;
+      for(const rr of [0.25,0.5,0.75,1]){
+        rctx.beginPath();
+        rctx.arc(0,0, R*rr, 0, Math.PI*2);
+        rctx.stroke();
+      }
+      // cruz
+      rctx.beginPath(); rctx.moveTo(-R,0); rctx.lineTo(R,0); rctx.stroke();
+      rctx.beginPath(); rctx.moveTo(0,-R); rctx.lineTo(0,R); rctx.stroke();
+
+      // sweep
+      sweep += 0.028;
+      if (sweep > Math.PI*2) sweep = 0;
+
+      const grad = rctx.createRadialGradient(0,0, 0, 0,0, R);
+      grad.addColorStop(0, "rgba(75,255,179,0.16)");
+      grad.addColorStop(1, "rgba(75,255,179,0.00)");
+
+      rctx.fillStyle = grad;
+      rctx.beginPath();
+      rctx.moveTo(0,0);
+      rctx.arc(0,0,R, sweep, sweep + 0.65);
+      rctx.closePath();
+      rctx.fill();
+
+      // blips (pequeños puntos)
+      for (const b of blips){
+        b.pulse += 0.03;
+        const px = Math.cos(b.ang) * (R*b.rad);
+        const py = Math.sin(b.ang) * (R*b.rad);
+
+        const pulse = (Math.sin(b.pulse)+1)/2; // 0..1
+        const size = 2.2 + pulse*2.2;
+
+        rctx.fillStyle = `rgba(255,255,255,${0.45 + pulse*0.35})`;
+        rctx.beginPath();
+        rctx.arc(px,py,size,0,Math.PI*2);
+        rctx.fill();
+      }
+
+      rctx.restore();
+      requestAnimationFrame(drawRadar);
+    }
+
+    // init animations
+    resizeParticles();
+    initParticles();
+    drawParticles();
+    drawRadar();
   </script>
 </body>
 </html>
