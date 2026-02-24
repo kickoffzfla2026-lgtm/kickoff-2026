@@ -7,9 +7,9 @@
   <style>
     body{font-family:system-ui,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#f5f6f8;color:#111;padding:24px}
     .wrap{width:min(980px,96vw)}
-    .card{width:min(420px,92vw);background:#fff;padding:24px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.12);margin:0 auto}
+    .card{width:min(520px,96vw);background:#fff;padding:24px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.12);margin:0 auto}
     h1{font-size:20px;margin:0 0 12px}
-    p{opacity:.85;margin:0 0 16px}
+    p{opacity:.9;margin:0 0 10px}
     input{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #d7dbe3;background:#fff;color:#111;font-size:16px;outline:none}
     button{width:100%;margin-top:12px;padding:12px 14px;border-radius:12px;border:0;background:#2563eb;color:#fff;font-size:16px;cursor:pointer}
     button:hover{filter:brightness(1.05)}
@@ -28,17 +28,27 @@
 </head>
 <body>
   <div class="wrap">
-    <!-- Paso 1: Código -->
+
+    <!-- 1) CÓDIGO -->
     <div class="card" id="codeCard">
       <h1>Código de Agente🕵🏻‍♂️</h1>
       <p>Ingresa el código para continuar.</p>
       <input id="code" type="password" placeholder="Código" autocomplete="off" />
       <button id="btn">Entrar</button>
       <div class="msg" id="msg"></div>
-      <div class="hint">Si aciertas, debes saltar 3 barreras.</div>
+      <div class="hint">Si aciertas, recibirás una misión.</div>
     </div>
 
-    <!-- Paso 2: Juego -->
+    <!-- 2) MENSAJE DE MISIÓN -->
+    <div class="card" id="missionCard" style="display:none;">
+      <h1>✅ Lograste acceder, agente</h1>
+      <p>Ahora tienes una misión:</p>
+      <p><strong>Saltar los obstáculos.</strong></p>
+      <button id="readyBtn">Estoy listo</button>
+      <div class="hint">Tip: espacio / clic / toque para saltar.</div>
+    </div>
+
+    <!-- 3) JUEGO -->
     <div id="gameWrap">
       <div class="gameTop">
         <div>
@@ -57,6 +67,7 @@
         <canvas id="cv" width="900" height="260"></canvas>
       </div>
     </div>
+
   </div>
 
   <script>
@@ -64,10 +75,13 @@
     const CODIGOS_VALIDOS = ["2201", "2095", "1883", "0001"];
 
     // ✅ Enlace Drive a abrir al ganar
-    const ENLACE_DRIVE = "https://drive.google.com/file/d/1cfL9S6FOY2NseUfphpPfO4r54i-hxTw0/view?usp=sharing";
+    const ENLACE_DRIVE = "PEGA_AQUI_TU_LINK_DE_DRIVE";
 
     // ====== UI ======
     const codeCard = document.getElementById("codeCard");
+    const missionCard = document.getElementById("missionCard");
+    const readyBtn = document.getElementById("readyBtn");
+
     const input = document.getElementById("code");
     const msg = document.getElementById("msg");
     const btn = document.getElementById("btn");
@@ -86,6 +100,18 @@
       const features = `toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=${w},height=${h},top=0,left=0`;
       const win = window.open(ENLACE_DRIVE, "_blank", features);
       if (!win) window.location.href = ENLACE_DRIVE;
+    }
+
+    // ====== Pantallas ======
+    function showMission(){
+      codeCard.style.display = "none";
+      missionCard.style.display = "block";
+    }
+
+    function showGame(){
+      missionCard.style.display = "none";
+      gameWrap.style.display = "block";
+      resetGame();
     }
 
     // ====== Juego ======
@@ -201,7 +227,6 @@
       }
     }
 
-    // Dibuja un espía “cartoon” (no solo un rectángulo)
     function drawSpy(){
       const x = spy.x, y = spy.y;
 
@@ -229,26 +254,24 @@
       ctx.clearRect(x + 9, y - spy.h - 9, 6, 4);
       ctx.clearRect(x + 19, y - spy.h - 9, 6, 4);
 
-      // corbata (azul)
+      // corbata
       ctx.fillStyle = "#2563eb";
       ctx.fillRect(x + 16, y - spy.h + 14, 2, 16);
 
-      // pierna delantera
+      // piernas
       ctx.fillStyle = "#111";
       ctx.fillRect(x + 5, y - 14, 9, 14);
-
-      // pierna trasera
-      ctx.fillStyle = "#111";
       ctx.fillRect(x + 20, y - 12, 9, 12);
     }
 
     function draw(){
       ctx.clearRect(0,0,cv.width,cv.height);
 
-      // cielo (blanco) y línea de suelo
+      // fondo blanco
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0,0,cv.width,cv.height);
 
+      // suelo
       ctx.fillStyle = "#111";
       ctx.fillRect(60, groundY, cv.width-120, 3);
 
@@ -257,7 +280,7 @@
       ctx.font = "16px system-ui";
       ctx.fillText("Espacio / clic / toque para saltar", 60, 42);
 
-      // obstáculos (negros, visibles)
+      // obstáculos (negros)
       ctx.fillStyle = "#111";
       for (const o of obstacles){
         ctx.fillRect(o.x, o.y - o.h, o.w, o.h);
@@ -272,18 +295,12 @@
       requestAnimationFrame(loop);
     }
 
-    // ====== Código → Juego ======
-    function showGame(){
-      codeCard.style.display = "none";
-      gameWrap.style.display = "block";
-      resetGame();
-    }
-
+    // ====== Código → Misión → Juego ======
     function checkCode(){
       const code = input.value.trim();
       if (CODIGOS_VALIDOS.includes(code)) {
         msg.textContent = "";
-        showGame();
+        showMission();
       } else {
         msg.textContent = "Código incorrecto. Intente de nuevo.";
         input.value = "";
@@ -293,6 +310,7 @@
 
     btn.addEventListener("click", checkCode);
     input.addEventListener("keydown",(e)=>{ if(e.key==="Enter") checkCode(); });
+    readyBtn.addEventListener("click", showGame);
 
     // Controles: espacio, clic, tap
     window.addEventListener("keydown",(e)=>{
