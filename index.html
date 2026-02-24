@@ -40,7 +40,7 @@
     p{opacity:.9;margin:0 0 10px;color:var(--muted)}
     input{
       width:85%;
-      padding:12px 14px;
+      padding:14px 16px;
       border-radius:12px;
       border:1px solid var(--border);
       background:var(--card2);
@@ -151,7 +151,7 @@
       <div class="hint">Si aciertas, recibes una misión.</div>
     </div>
 
-    <!-- 2) MENSAJE DE MISIÓN (más grande) -->
+    <!-- 2) MENSAJE DE MISIÓN -->
     <div class="card" id="missionCard" style="display:none;">
       <div class="missionTitle">✅ Acceso concedido, agente</div>
       <div class="missionLead">Tu misión comienza ahora.</div>
@@ -167,7 +167,7 @@
     <div id="gameWrap">
       <div class="gameTop">
         <div>
-          <div style="font-weight:700">Misión: conecta los 3 pares (6×6)</div>
+          <div style="font-weight:700">Misión: conecta los 3 pares</div>
           <div class="hint" style="margin:6px 0 0">No puedes pasar por encima de puntos de otro color.</div>
         </div>
         <button class="miniBtn" id="resetBtn">Reiniciar</button>
@@ -181,9 +181,12 @@
 
   </div>
 
+  <!-- Confetti overlay -->
+  <canvas id="confetti" style="position:fixed; inset:0; width:100vw; height:100vh; pointer-events:none; z-index:9999; display:none;"></canvas>
+
   <script>
     // ✅ Códigos válidos
-    const CODIGOS_VALIDOS = ["2201", "2095", "1883", "1998"];
+    const CODIGOS_VALIDOS = ["2201", "2095", "1883", "0001"];
 
     // ✅ Pega aquí tu enlace de Google Drive
     const ENLACE_DRIVE = "https://drive.google.com/file/d/1cfL9S6FOY2NseUfphpPfO4r54i-hxTw0/view?usp=sharing";
@@ -306,10 +309,93 @@
       renderPaths();
     }
 
+    // ===== Confetti (sin librerías) =====
+    const confettiCanvas = document.getElementById("confetti");
+    const cctx = confettiCanvas.getContext("2d");
+
+    function resizeConfetti(){
+      const dpr = window.devicePixelRatio || 1;
+      confettiCanvas.width = Math.floor(window.innerWidth * dpr);
+      confettiCanvas.height = Math.floor(window.innerHeight * dpr);
+      cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener("resize", resizeConfetti);
+
+    function launchConfetti(durationMs = 1400){
+      resizeConfetti();
+      confettiCanvas.style.display = "block";
+
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+
+      const pieces = [];
+      const N = 140; // menos "ruidoso" pero visible
+
+      const colors = ["#4b7dff", "#ff4b6e", "#4bffb3", "#ffd166", "#ffffff"];
+
+      for (let i=0; i<N; i++){
+        pieces.push({
+          x: Math.random()*W,
+          y: -20 - Math.random()*H*0.35,
+          vx: (Math.random()-0.5)*6,
+          vy: 3 + Math.random()*6,
+          r: 3 + Math.random()*5,
+          rot: Math.random()*Math.PI,
+          vr: (Math.random()-0.5)*0.25,
+          color: colors[(Math.random()*colors.length)|0],
+          shape: Math.random() < 0.65 ? "rect" : "circle"
+        });
+      }
+
+      const start = performance.now();
+      function frame(t){
+        const elapsed = t - start;
+        cctx.clearRect(0,0,W,H);
+
+        for (const p of pieces){
+          p.vy += 0.06;
+          p.x += p.vx;
+          p.y += p.vy;
+          p.rot += p.vr;
+
+          if (p.x < -30) p.x = W + 30;
+          if (p.x > W + 30) p.x = -30;
+
+          cctx.save();
+          cctx.translate(p.x, p.y);
+          cctx.rotate(p.rot);
+          cctx.fillStyle = p.color;
+
+          if (p.shape === "rect"){
+            cctx.fillRect(-p.r, -p.r, p.r*2, p.r*1.4);
+          } else {
+            cctx.beginPath();
+            cctx.arc(0,0,p.r,0,Math.PI*2);
+            cctx.fill();
+          }
+          cctx.restore();
+        }
+
+        if (elapsed < durationMs){
+          requestAnimationFrame(frame);
+        } else {
+          cctx.clearRect(0,0,W,H);
+          confettiCanvas.style.display = "none";
+        }
+      }
+
+      requestAnimationFrame(frame);
+    }
+
     function checkWin(){
       if (done.a && done.b && done.c) {
-        gameMsg.textContent="¡Completado! ✅ Abriendo…";
-        abrirDrivePantallaGrande();
+        gameMsg.textContent="¡Completado! ✅";
+        launchConfetti(1400);
+
+        setTimeout(() => {
+          gameMsg.textContent="Abriendo…";
+          abrirDrivePantallaGrande();
+        }, 900);
       }
     }
 
