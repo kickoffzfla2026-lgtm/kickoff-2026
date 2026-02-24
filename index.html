@@ -21,27 +21,9 @@
     .miniBtn{width:auto;margin:0;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid #d7dbe3;color:#111;cursor:pointer}
     .miniBtn:hover{background:#f5f6f8}
 
-    .board{
-      margin:14px auto 0;
-      width:min(520px,96vw);
-      aspect-ratio:1/1;
-      display:grid;
-      grid-template-columns:repeat(6,1fr);
-      gap:10px;
-      touch-action:none;
-      user-select:none;
-      -webkit-user-select:none;
-    }
-    .cell{background:#fff;border:1px solid #d7dbe3;border-radius:14px;position:relative;overflow:hidden}
-    .dot{position:absolute;inset:0;margin:auto;width:18px;height:18px;border-radius:999px;box-shadow:0 0 0 4px rgba(0,0,0,.06);z-index:3}
-    .dot.a{background:#ff4b6e}   /* rojo */
-    .dot.b{background:#22c55e}   /* verde */
-    .dot.c{background:#2563eb}   /* azul  */
-
-    .path{position:absolute;inset:0;margin:auto;width:78%;height:78%;border-radius:14px;opacity:.18;z-index:2}
-    .path.a{background:#ff4b6e}
-    .path.b{background:#22c55e}
-    .path.c{background:#2563eb}
+    canvas{width:100%;height:auto;border-radius:16px;background:#ffffff;border:1px solid #d7dbe3;touch-action:manipulation}
+    .ok{color:#117a37}
+    .pill{display:inline-block;padding:2px 10px;border-radius:999px;background:#f1f5ff;border:1px solid #d7dbe3;font-size:12px}
   </style>
 </head>
 <body>
@@ -54,32 +36,36 @@
       <input id="code" type="password" placeholder="Código" autocomplete="off" />
       <button id="btn">Entrar</button>
       <div class="msg" id="msg"></div>
-      <div class="hint">Si aciertas, recibes una misión.</div>
+      <div class="hint">Si aciertas, recibirás una misión.</div>
     </div>
 
     <!-- 2) MENSAJE DE MISIÓN -->
     <div class="card" id="missionCard" style="display:none;">
       <h1>✅ Lograste acceder, agente</h1>
       <p>Ahora tienes una misión:</p>
-      <p><strong>Conectar los puntos sin cruzar caminos.</strong></p>
+      <p><strong>Saltar los obstáculos.</strong></p>
       <button id="readyBtn">Estoy listo</button>
-      <div class="hint">Tip: toca un punto y arrastra celda por celda.</div>
+      <div class="hint">Tip: espacio / clic / toque para saltar.</div>
     </div>
 
-    <!-- 3) FLOW FREE 6x6 -->
+    <!-- 3) JUEGO -->
     <div id="gameWrap">
       <div class="gameTop">
         <div>
-          <div style="font-weight:700">Misión: conecta los 3 pares (6×6)</div>
-          <div class="hint" style="margin:6px 0 0">No puedes pasar por encima de puntos de otro color.</div>
+          <div style="font-weight:700">Misión: salta 3 barreras <span class="pill">Espacio / clic / toque</span></div>
+          <div class="hint" style="margin:6px 0 0">Si chocas, reinicia.</div>
         </div>
-        <button class="miniBtn" id="resetBtn">Reiniciar</button>
+        <button class="miniBtn" id="restartBtn">Reiniciar</button>
       </div>
 
-      <div class="board" id="board"></div>
+      <div style="margin-top:12px" class="hint">
+        Barreras superadas: <strong><span id="count">0</span>/3</strong>
+        <span id="status" style="margin-left:10px"></span>
+      </div>
 
-      <div class="msg" id="gameMsg" style="color:#117a37;margin-top:12px;min-height:22px"></div>
-      <div class="hint">Al completar los 3 caminos, se abre tu enlace de Drive.</div>
+      <div style="margin-top:12px">
+        <canvas id="cv" width="900" height="260"></canvas>
+      </div>
     </div>
 
   </div>
@@ -88,19 +74,8 @@
     // ✅ Códigos válidos
     const CODIGOS_VALIDOS = ["2201", "2095", "1883", "0001"];
 
-    // ✅ Pega aquí tu enlace de Google Drive
+    // ✅ Enlace Drive a abrir al ganar
     const ENLACE_DRIVE = "https://drive.google.com/file/d/1cfL9S6FOY2NseUfphpPfO4r54i-hxTw0/view?usp=sharing";
-
-    // ====== FLOW CONFIG ======
-    const SIZE = 6;
-
-    // Puzzle 6x6 (3 pares) - pensado para dar reto sin frustrar.
-    // Coordenadas 0-index (r,c).
-    const pairs = {
-      a: { start:[0,0], end:[3,2] }, // rojo
-      b: { start:[0,5], end:[3,3] }, // verde
-      c: { start:[5,1], end:[5,4] }, // azul (abajo, pero obliga a dejar espacio)
-    };
 
     // ====== UI ======
     const codeCard = document.getElementById("codeCard");
@@ -112,9 +87,12 @@
     const btn = document.getElementById("btn");
 
     const gameWrap = document.getElementById("gameWrap");
-    const board = document.getElementById("board");
-    const resetBtn = document.getElementById("resetBtn");
-    const gameMsg = document.getElementById("gameMsg");
+    const restartBtn = document.getElementById("restartBtn");
+    const countEl = document.getElementById("count");
+    const statusEl = document.getElementById("status");
+
+    const cv = document.getElementById("cv");
+    const ctx = cv.getContext("2d");
 
     // ====== Abrir Drive grande ======
     function abrirDrivePantallaGrande(){
@@ -129,186 +107,193 @@
       codeCard.style.display = "none";
       missionCard.style.display = "block";
     }
+
     function showGame(){
       missionCard.style.display = "none";
       gameWrap.style.display = "block";
-      buildBoard();
       resetGame();
     }
 
-    // ====== Flow engine ======
-    const key = (r,c)=>`${r},${c}`;
-    const inBounds = (r,c)=>r>=0 && r<SIZE && c>=0 && c<SIZE;
-    const isNeighbor = (a,b)=>Math.abs(a.r-b.r)+Math.abs(a.c-b.c)===1;
+    // ====== Juego ======
+    let running = false;
+    let won = false;
+    let passed = 0;
 
-    function isEndpoint(color,r,c){
-      const p=pairs[color];
-      return (p.start[0]===r && p.start[1]===c) || (p.end[0]===r && p.end[1]===c);
-    }
-    function otherEndpoint(color,r,c){
-      const p=pairs[color];
-      if (p.start[0]===r && p.start[1]===c) return {r:p.end[0], c:p.end[1]};
-      return {r:p.start[0], c:p.start[1]};
-    }
+    const groundY = 210;
+    const gravity = 0.9;
 
-    const occ = new Map();                 // cellKey -> color
-    const paths = { a:[], b:[], c:[] };    // color -> [{r,c}]
-    const done  = { a:false, b:false, c:false };
+    const spy = {
+      x: 120,
+      y: groundY,
+      w: 34,
+      h: 46,
+      vy: 0,
+      jumping: false
+    };
 
-    let drawing=false, current=null, lastCell=null;
+    let speed = 6.8;
+    let spawnTimer = 0;
+    let nextSpawn = 70;
 
-    function cellEl(r,c){
-      const idx = r*SIZE + c;
-      return board.children[idx];
-    }
-
-    function clearVisualPaths(){
-      board.querySelectorAll(".path").forEach(el=>el.remove());
-    }
-    function renderPaths(){
-      clearVisualPaths();
-      for (const color of ["a","b","c"]) {
-        for (const cell of paths[color]) {
-          const el = cellEl(cell.r, cell.c);
-          if (!el) continue;
-          const p = document.createElement("div");
-          p.className = `path ${color}`;
-          el.appendChild(p);
-        }
-      }
-    }
-
-    function buildBoard(){
-      board.innerHTML="";
-      for (let r=0;r<SIZE;r++){
-        for (let c=0;c<SIZE;c++){
-          const cell=document.createElement("div");
-          cell.className="cell";
-          cell.dataset.r=r;
-          cell.dataset.c=c;
-
-          for (const color of ["a","b","c"]) {
-            const p=pairs[color];
-            if ((p.start[0]===r && p.start[1]===c) || (p.end[0]===r && p.end[1]===c)) {
-              const d=document.createElement("div");
-              d.className=`dot ${color}`;
-              cell.appendChild(d);
-            }
-          }
-          board.appendChild(cell);
-        }
-      }
-    }
+    const obstacles = [];
 
     function resetGame(){
-      occ.clear();
-      paths.a=[]; paths.b=[]; paths.c=[];
-      done.a=false; done.b=false; done.c=false;
-      drawing=false; current=null; lastCell=null;
-      gameMsg.textContent="";
-      renderPaths();
+      running = true;
+      won = false;
+      passed = 0;
+      speed = 6.8;
+      spawnTimer = 0;
+      nextSpawn = 70;
+
+      obstacles.length = 0;
+      spy.y = groundY;
+      spy.vy = 0;
+      spy.jumping = false;
+
+      countEl.textContent = "0";
+      statusEl.textContent = "";
+      statusEl.className = "";
     }
 
-    function checkWin(){
-      if (done.a && done.b && done.c) {
-        gameMsg.textContent="¡Completado! ✅ Abriendo…";
-        abrirDrivePantallaGrande();
+    function jump(){
+      if (!running || won) return;
+      if (!spy.jumping) {
+        spy.vy = -16;
+        spy.jumping = true;
       }
     }
 
-    function startDrawing(color, startCell){
-      drawing=true; current=color; lastCell=startCell;
-
-      // borrar camino previo de ese color
-      for (const cell of paths[color]) occ.delete(key(cell.r,cell.c));
-      paths[color]=[];
-      done[color]=false;
-
-      occ.set(key(startCell.r,startCell.c), color);
-      paths[color].push(startCell);
-      renderPaths();
+    function spawnObstacle(){
+      const h = 30 + Math.floor(Math.random()*22);
+      obstacles.push({
+        x: cv.width + 10,
+        y: groundY,
+        w: 20 + Math.floor(Math.random()*14),
+        h
+      });
     }
 
-    function tryExtend(toCell){
-      if(!drawing || !current || !lastCell) return;
-      if(!inBounds(toCell.r,toCell.c)) return;
-      if(!isNeighbor(lastCell,toCell)) return;
+    function collide(a, b){
+      const ax1 = a.x, ax2 = a.x + a.w;
+      const ay1 = a.y - a.h, ay2 = a.y;
+      const bx1 = b.x, bx2 = b.x + b.w;
+      const by1 = b.y - b.h, by2 = b.y;
+      return ax1 < bx2 && ax2 > bx1 && ay1 < by2 && ay2 > by1;
+    }
 
-      const k = key(toCell.r,toCell.c);
-      const occupiedBy = occ.get(k);
+    function update(){
+      spy.vy += gravity;
+      spy.y += spy.vy;
 
-      if (occupiedBy && occupiedBy !== current) return;
-
-      // no entrar en endpoints de otro color
-      for (const other of ["a","b","c"]) {
-        if (other!==current && isEndpoint(other,toCell.r,toCell.c)) return;
+      if (spy.y >= groundY) {
+        spy.y = groundY;
+        spy.vy = 0;
+        spy.jumping = false;
       }
 
-      // recortar si vuelves sobre tu camino
-      const idx = paths[current].findIndex(p=>p.r===toCell.r && p.c===toCell.c);
-      if (idx !== -1) {
-        const removed = paths[current].splice(idx+1);
-        for (const cell of removed) occ.delete(key(cell.r,cell.c));
-        lastCell = toCell;
-        renderPaths();
-        return;
+      spawnTimer++;
+      if (spawnTimer >= nextSpawn) {
+        spawnTimer = 0;
+        nextSpawn = 55 + Math.floor(Math.random()*45);
+        spawnObstacle();
       }
 
-      // añadir
-      occ.set(k,current);
-      paths[current].push(toCell);
-      lastCell = toCell;
-      renderPaths();
+      for (let i = obstacles.length - 1; i >= 0; i--){
+        const o = obstacles[i];
+        o.x -= speed;
 
-      // ¿llegó al destino?
-      const start = paths[current][0];
-      const target = otherEndpoint(current, start.r, start.c);
-      if (toCell.r===target.r && toCell.c===target.c) {
-        done[current]=true;
-        drawing=false; current=null; lastCell=null;
-        gameMsg.textContent="¡Bien! Completa los otros colores.";
-        checkWin();
-      }
-    }
-
-    function endDrawing(){
-      drawing=false; current=null; lastCell=null;
-    }
-
-    // arrastre sólido: celda bajo el puntero
-    function cellFromPoint(x,y){
-      const el = document.elementFromPoint(x,y);
-      const cell = el && el.closest ? el.closest(".cell") : null;
-      if (!cell) return null;
-      return { r:Number(cell.dataset.r), c:Number(cell.dataset.c) };
-    }
-
-    board.addEventListener("pointerdown", (e)=>{
-      const cell = cellFromPoint(e.clientX, e.clientY);
-      if (!cell) return;
-
-      for (const color of ["a","b","c"]) {
-        if (isEndpoint(color, cell.r, cell.c)) {
-          startDrawing(color, cell);
-          board.setPointerCapture(e.pointerId);
-          e.preventDefault();
-          return;
+        if (collide(spy, o)) {
+          running = false;
+          statusEl.textContent = "Fallaste 😅";
+          statusEl.className = "";
         }
+
+        if (!o.passed && o.x + o.w < spy.x) {
+          o.passed = true;
+          passed++;
+          countEl.textContent = String(passed);
+          speed += 0.28;
+
+          if (passed >= 3 && !won) {
+            won = true;
+            running = false;
+            statusEl.textContent = "¡Misión cumplida! ✅ Abriendo…";
+            statusEl.className = "ok";
+            abrirDrivePantallaGrande();
+          }
+        }
+
+        if (o.x + o.w < -40) obstacles.splice(i, 1);
       }
-    });
+    }
 
-    board.addEventListener("pointermove", (e)=>{
-      if (!drawing) return;
-      const cell = cellFromPoint(e.clientX, e.clientY);
-      if (!cell) return;
-      tryExtend(cell);
-      e.preventDefault();
-    });
+    function drawSpy(){
+      const x = spy.x, y = spy.y;
 
-    board.addEventListener("pointerup", (e)=>{ endDrawing(); e.preventDefault(); });
-    board.addEventListener("pointercancel", (e)=>{ endDrawing(); e.preventDefault(); });
+      // sombra
+      ctx.fillStyle = "rgba(0,0,0,0.08)";
+      ctx.beginPath();
+      ctx.ellipse(x + spy.w/2, groundY + 10, 18, 4, 0, 0, Math.PI*2);
+      ctx.fill();
 
-    resetBtn.addEventListener("click", resetGame);
+      // cuerpo (traje)
+      ctx.fillStyle = "#111";
+      ctx.fillRect(x, y - spy.h, spy.w, spy.h);
+
+      // cabeza
+      ctx.fillStyle = "#f2c7a0";
+      ctx.fillRect(x + 8, y - spy.h - 18, 18, 18);
+
+      // pelo
+      ctx.fillStyle = "#111";
+      ctx.fillRect(x + 8, y - spy.h - 18, 18, 6);
+
+      // gafas
+      ctx.fillStyle = "#111";
+      ctx.fillRect(x + 7, y - spy.h - 10, 20, 6);
+      ctx.clearRect(x + 9, y - spy.h - 9, 6, 4);
+      ctx.clearRect(x + 19, y - spy.h - 9, 6, 4);
+
+      // corbata
+      ctx.fillStyle = "#2563eb";
+      ctx.fillRect(x + 16, y - spy.h + 14, 2, 16);
+
+      // piernas
+      ctx.fillStyle = "#111";
+      ctx.fillRect(x + 5, y - 14, 9, 14);
+      ctx.fillRect(x + 20, y - 12, 9, 12);
+    }
+
+    function draw(){
+      ctx.clearRect(0,0,cv.width,cv.height);
+
+      // fondo blanco
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0,0,cv.width,cv.height);
+
+      // suelo
+      ctx.fillStyle = "#111";
+      ctx.fillRect(60, groundY, cv.width-120, 3);
+
+      // texto
+      ctx.fillStyle = "#111";
+      ctx.font = "16px system-ui";
+      ctx.fillText("Espacio / clic / toque para saltar", 60, 42);
+
+      // obstáculos (negros)
+      ctx.fillStyle = "#111";
+      for (const o of obstacles){
+        ctx.fillRect(o.x, o.y - o.h, o.w, o.h);
+      }
+
+      drawSpy();
+    }
+
+    function loop(){
+      if (running) update();
+      draw();
+      requestAnimationFrame(loop);
+    }
 
     // ====== Código → Misión → Juego ======
     function checkCode(){
@@ -326,6 +311,20 @@
     btn.addEventListener("click", checkCode);
     input.addEventListener("keydown",(e)=>{ if(e.key==="Enter") checkCode(); });
     readyBtn.addEventListener("click", showGame);
+
+    // Controles: espacio, clic, tap
+    window.addEventListener("keydown",(e)=>{
+      if (e.code === "Space") { e.preventDefault(); jump(); }
+    });
+    cv.addEventListener("pointerdown",(e)=>{ e.preventDefault(); jump(); });
+
+    restartBtn.addEventListener("click", ()=>{
+      statusEl.textContent = "";
+      statusEl.className = "";
+      resetGame();
+    });
+
+    loop();
   </script>
 </body>
 </html>
