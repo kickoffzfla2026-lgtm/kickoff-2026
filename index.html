@@ -30,7 +30,7 @@
       overflow-x:hidden;
     }
 
-    /* Capas */
+    /* ===== Capas ===== */
     #particles{
       position:fixed; inset:0;
       width:100vw; height:100vh;
@@ -38,6 +38,37 @@
       pointer-events:none;
       opacity:0.9;
     }
+
+    .scanlines{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index:1; /* encima de partículas, debajo del contenido */
+      opacity:.18;
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          rgba(255,255,255,.03) 0px,
+          rgba(255,255,255,.03) 1px,
+          rgba(0,0,0,0) 3px,
+          rgba(0,0,0,0) 6px
+        );
+      mix-blend-mode: overlay;
+      animation: scanMove 6s linear infinite, flicker 7.5s infinite;
+    }
+    @keyframes scanMove{
+      from { transform: translateY(0); }
+      to   { transform: translateY(24px); }
+    }
+    @keyframes flicker{
+      0%, 100% { opacity:.18; filter:none; }
+      92% { opacity:.18; }
+      93% { opacity:.28; filter:brightness(1.08) contrast(1.05); }
+      94% { opacity:.14; }
+      95% { opacity:.22; filter:brightness(1.03); }
+      96% { opacity:.18; filter:none; }
+    }
+
     #radarWrap{
       position:fixed;
       top:14px; right:14px;
@@ -66,10 +97,59 @@
         radial-gradient(circle at center, rgba(255,255,255,.03) 58%, rgba(0,0,0,0) 60%);
     }
 
+    /* Sello */
+    #stamp{
+      position:fixed;
+      left:50%;
+      top:22%;
+      transform:translate(-50%,-50%) rotate(-12deg) scale(0.85);
+      z-index:9998;
+      pointer-events:none;
+      opacity:0;
+      display:none;
+      filter: drop-shadow(0 14px 22px rgba(0,0,0,.45));
+    }
+    .stampBox{
+      border:4px solid rgba(183,255,201,.95);
+      color:rgba(183,255,201,.95);
+      padding:16px 22px;
+      border-radius:14px;
+      text-transform:uppercase;
+      letter-spacing:.18em;
+      font-weight:900;
+      font-size:20px;
+      background:rgba(12,19,38,.25);
+      box-shadow: inset 0 0 0 2px rgba(183,255,201,.18);
+    }
+    .stampSub{
+      display:block;
+      margin-top:6px;
+      font-size:11px;
+      font-weight:700;
+      opacity:.9;
+      letter-spacing:.22em;
+      text-align:center;
+    }
+    .stampOn{
+      display:block !important;
+      animation: stampIn .55s cubic-bezier(.2,1.2,.2,1) forwards, stampShake 1.2s .55s ease-in-out forwards;
+    }
+    @keyframes stampIn{
+      0%   { opacity:0; transform:translate(-50%,-90%) rotate(-16deg) scale(1.35); }
+      55%  { opacity:1; transform:translate(-50%,-50%) rotate(-12deg) scale(0.95); }
+      75%  { opacity:1; transform:translate(-50%,-50%) rotate(-12deg) scale(1.03); }
+      100% { opacity:1; transform:translate(-50%,-50%) rotate(-12deg) scale(1); }
+    }
+    @keyframes stampShake{
+      0%   { filter: drop-shadow(0 14px 22px rgba(0,0,0,.45)); }
+      40%  { filter: drop-shadow(0 18px 30px rgba(0,0,0,.55)); }
+      100% { filter: drop-shadow(0 14px 22px rgba(0,0,0,.45)); }
+    }
+
     .wrap{
       width:min(980px,96vw);
       position:relative;
-      z-index:5; /* sobre partículas */
+      z-index:5;
     }
 
     .card{
@@ -108,7 +188,6 @@
     .msg{margin-top:12px;min-height:22px;color:var(--danger)}
     .hint{margin-top:12px;font-size:12px;opacity:.7;color:var(--muted)}
 
-    /* Mensaje misión */
     .missionTitle{
       font-size:34px;
       line-height:1.05;
@@ -131,7 +210,6 @@
     }
     .missionBox strong{color:#fff}
 
-    /* Juego */
     #gameWrap{
       display:none;
       margin:18px auto 0;
@@ -171,9 +249,9 @@
       box-shadow:0 0 0 4px rgba(255,255,255,.05);
       z-index:3
     }
-    .dot.a{background:#ff4b6e}   /* rojo */
-    .dot.b{background:#4bffb3}   /* verde */
-    .dot.c{background:#4b7dff}   /* azul  */
+    .dot.a{background:#ff4b6e}
+    .dot.b{background:#4bffb3}
+    .dot.c{background:#4b7dff}
 
     .path{
       position:absolute;inset:0;margin:auto;width:78%;height:78%;
@@ -185,9 +263,11 @@
   </style>
 </head>
 <body>
-
   <!-- Partículas -->
   <canvas id="particles"></canvas>
+
+  <!-- Scanlines -->
+  <div class="scanlines" aria-hidden="true"></div>
 
   <!-- Radar -->
   <div id="radarWrap">
@@ -195,8 +275,15 @@
     <div id="radarLabel">RADAR</div>
   </div>
 
-  <div class="wrap">
+  <!-- Sello -->
+  <div id="stamp" aria-hidden="true">
+    <div class="stampBox">
+      ACCESS GRANTED
+      <span class="stampSub">AGENTE AUTORIZADO</span>
+    </div>
+  </div>
 
+  <div class="wrap">
     <!-- 1) CÓDIGO -->
     <div class="card" id="codeCard">
       <h1>Código de Agente🕵🏻‍♂️</h1>
@@ -232,9 +319,8 @@
       <div class="board" id="board"></div>
 
       <div class="msg" id="gameMsg" style="color:var(--ok);margin-top:12px;min-height:22px"></div>
-      <div class="hint">Al completar los 3 caminos, se abre el documento secreto.</div>
+      <div class="hint">Al completar los 3 caminos, se abre tu enlace secreto.</div>
     </div>
-
   </div>
 
   <!-- Confetti overlay -->
@@ -242,7 +328,7 @@
 
   <script>
     // ✅ Códigos válidos
-    const CODIGOS_VALIDOS = ["2201", "2095", "1883", "0001", "2152", "1266", "2233", "2232", "2231", "1894", "2146", "1181", "1998", "1016", "1757", "2155", "1655", "1655", "0863", "1678", "1935", "1941", "1494", "1913", "2016", "1559", "2221", "2153", "2049", "2215", "1733", "1948", "1127", "1261", "2214", "2214", "2135", "2083", "2213","1612", "2211", "0012", "2210", "0330", "2010", "0844","1727", "2122", "2209", "2139", "2139", "2136", "2157", "1711", "2196", "2195", "2193", "2082", "2184", "1173", "1795", "2133", "2058", "1905","0096", "1017", "1788", "2084", "1674", "2183", "1815", "2101", "1995", "0632", "2182", "2142", "1279", "2007", "2178", "1665", "1185", "2115", "0679", "1731", "1527", "2152", "2161", "1884", "1975", "2140", "0828", "2095", "2079", "1384", "1367", "2159", "2160", "2158", "1989", "2085", "1110", "1942"];
+   const CODIGOS_VALIDOS = ["2201", "2095", "1883", "0001", "2152", "1266", "2233", "2232", "2231", "1894", "2146", "1181", "1998", "1016", "1757", "2155", "1655", "1655", "0863", "1678", "1935", "1941", "1494", "1913", "2016", "1559", "2221", "2153", "2049", "2215", "1733", "1948", "1127", "1261", "2214", "2214", "2135", "2083", "2213","1612", "2211", "0012", "2210", "0330", "2010", "0844","1727", "2122", "2209", "2139", "2139", "2136", "2157", "1711", "2196", "2195", "2193", "2082", "2184", "1173", "1795", "2133", "2058", "1905","0096", "1017", "1788", "2084", "1674", "2183", "1815", "2101", "1995", "0632", "2182", "2142", "1279", "2007", "2178", "1665", "1185", "2115", "0679", "1731", "1527", "2152", "2161", "1884", "1975", "2140", "0828", "2095", "2079", "1384", "1367", "2159", "2160", "2158", "1989", "2085", "1110", "1942", "1942", "1988", "2212", "2085"];
 
     // ✅ Pega aquí tu enlace de Google Drive
     const ENLACE_DRIVE = "https://drive.google.com/file/d/1cfL9S6FOY2NseUfphpPfO4r54i-hxTw0/view?usp=sharing";
@@ -271,6 +357,8 @@
     const board = document.getElementById("board");
     const resetBtn = document.getElementById("resetBtn");
     const gameMsg = document.getElementById("gameMsg");
+
+    const stamp = document.getElementById("stamp");
 
     // ====== Abrir Drive grande ======
     function abrirDrivePantallaGrande(){
@@ -312,6 +400,7 @@
     const done  = { a:false, b:false, c:false };
 
     let drawing=false, current=null, lastCell=null;
+    let alreadyWon = false;
 
     function cellEl(r,c){
       const idx = r*SIZE + c;
@@ -361,8 +450,11 @@
       paths.a=[]; paths.b=[]; paths.c=[];
       done.a=false; done.b=false; done.c=false;
       drawing=false; current=null; lastCell=null;
+      alreadyWon = false;
       gameMsg.textContent="";
       renderPaths();
+      stamp.style.display = "none";
+      stamp.classList.remove("stampOn");
     }
 
     // ===== Confetti (sin librerías) =====
@@ -442,15 +534,30 @@
       requestAnimationFrame(frame);
     }
 
-    function checkWin(){
-      if (done.a && done.b && done.c) {
-        gameMsg.textContent="¡Completado! ✅";
-        launchConfetti(1400);
+    function showStamp(){
+      stamp.style.display = "block";
+      // reinicia animación si se llama más de una vez
+      stamp.classList.remove("stampOn");
+      void stamp.offsetWidth;
+      stamp.classList.add("stampOn");
+    }
 
+    function checkWin(){
+      if (alreadyWon) return;
+      if (done.a && done.b && done.c) {
+        alreadyWon = true;
+
+        gameMsg.textContent="¡Completado! ✅";
+        showStamp();
+
+        // confetti un poquito después del sello
+        setTimeout(() => launchConfetti(1400), 220);
+
+        // abre drive después (para que se vea el sello+confetti)
         setTimeout(() => {
           gameMsg.textContent="Abriendo…";
           abrirDrivePantallaGrande();
-        }, 900);
+        }, 1050);
       }
     }
 
@@ -597,7 +704,6 @@
     function drawParticles(){
       pctx.clearRect(0,0,pW,pH);
 
-      // puntos
       for(const p of particles){
         p.x += p.vx;
         p.y += p.vy;
@@ -613,7 +719,6 @@
         pctx.fill();
       }
 
-      // líneas sutiles entre cercanos
       for(let i=0;i<particles.length;i++){
         for(let j=i+1;j<particles.length;j++){
           const a=particles[i], b=particles[j];
@@ -652,7 +757,6 @@
       rctx.save();
       rctx.translate(R,R);
 
-      // grid
       rctx.strokeStyle = "rgba(75,255,179,0.18)";
       rctx.lineWidth = 1;
       for(const rr of [0.25,0.5,0.75,1]){
@@ -660,11 +764,9 @@
         rctx.arc(0,0, R*rr, 0, Math.PI*2);
         rctx.stroke();
       }
-      // cruz
       rctx.beginPath(); rctx.moveTo(-R,0); rctx.lineTo(R,0); rctx.stroke();
       rctx.beginPath(); rctx.moveTo(0,-R); rctx.lineTo(0,R); rctx.stroke();
 
-      // sweep
       sweep += 0.028;
       if (sweep > Math.PI*2) sweep = 0;
 
@@ -679,13 +781,12 @@
       rctx.closePath();
       rctx.fill();
 
-      // blips (pequeños puntos)
       for (const b of blips){
         b.pulse += 0.03;
         const px = Math.cos(b.ang) * (R*b.rad);
         const py = Math.sin(b.ang) * (R*b.rad);
 
-        const pulse = (Math.sin(b.pulse)+1)/2; // 0..1
+        const pulse = (Math.sin(b.pulse)+1)/2;
         const size = 2.2 + pulse*2.2;
 
         rctx.fillStyle = `rgba(255,255,255,${0.45 + pulse*0.35})`;
